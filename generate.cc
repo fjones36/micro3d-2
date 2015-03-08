@@ -272,222 +272,231 @@ int main(int argc, char* argv[])
 	float **basemat_even_y;
 	float **basemat_odd_x;
 	float **basemat_odd_y;
-	// ALLOCATE MEMORY
-	basemat_even_x = new float*[num_eveneu_x];
-	basemat_even_y = new float*[num_eveneu_x];
-	for (i=0; i<num_eveneu_x; i++)
-	{
-	  basemat_even_x[i] = new float[num_eveneu_y];
-	  basemat_even_y[i] = new float[num_eveneu_y];
-	}
-	basemat_odd_x = new float*[num_oddneu_x];
-	basemat_odd_y = new float*[num_oddneu_x];
-	for (i=0; i<num_oddneu_x; i++)
-	{
-	  basemat_odd_x[i] = new float[num_oddneu_y];
-	  basemat_odd_y[i] = new float[num_oddneu_y];
-	}
 
-	// INITIALIZE THE MATRICES FOR CRYSTALLINE PLACEMENT
-	float max_x = 0.;
-	float max_y = 0.;
-	for (i=0; i<num_eveneu_x; i++)
-	{
-	  for (j=0; j<num_eveneu_y; j++)
-	  {
-		basemat_even_x[i][j] = i * dq.inter_column;
-		basemat_even_y[i][j] = j * inter_y;
-		max_x = MAX(max_x, basemat_even_x[i][j] );
-		max_y = MAX(max_y, basemat_even_y[i][j] );
-	  }
-	}
-	for (i=0; i<num_oddneu_x; i++)
-	{
-	  for (j=0; j<num_oddneu_y; j++)
-	  {
-		basemat_odd_x[i][j] = i * dq.inter_column + dq.inter_column / 2.0;
-		basemat_odd_y[i][j] = j * inter_y + dq.inter_column * sin( RAD(60.) );
-		max_x = MAX(max_x, basemat_odd_x[i][j] );
-		max_y = MAX(max_y, basemat_odd_y[i][j] );
-	  }
-	}
-
-	// NOW CORRECT SYSTEM SIZE SO THAT COLUMNS AT THE BOUNDARY ARE
-	// NOT TOO CLOSE TOGETHER.
-	cout << "3. Got for columns: Max x = " << max_x << " Max y = " << max_y << "\n";
-	float L_box_tmp = MAX(max_x, max_y) + 2.1*dq.neu_radius;
-	dq.L_box = MAX(dq.L_box, L_box_tmp);
-	cout << "4. Corrected L_box to separate columns: " << dq.L_box << "\n";
-	// WRITE TO PARAM FILE.
-	param_out << dq.L_box    << " \tL_box   \n";
-
-	// REASSIGN (OR NOT) COLUMN POSITIONS TO HAVE RANDOM X,Y POSITIONS.
-	// RANDOMIZE WITHIN max_x AND max_y.
-	char col_pos_pre[40] = "column_xy_";
-	strcat(col_pos_pre, file_lab);
-	strcat(col_pos_pre, ".xy");
-	ofstream col_pos(col_pos_pre);
-	if (dq.put_random_col_xy) 
-	{
-	  cout << "NOTE: putting columns at random positions!\n";
-
-	  // THESE ARE SO THAT COLUMNS ARE ALWAYS ONE RADIUS AWAY FROM THE BORDERS,
-	  // RANDOM POSITIONS ARE BETWEEN L_o AND L_o + L_rnd.
-	  // COLUMNS WILL AVOID OVERLAP DESCRIBED BY 2*RADIUS_NEURONS.
-	  double L_rnd = dq.L_box - 2 * dq.neu_radius;
-	  double L_o   = dq.neu_radius;
-	  double x1,y1,z1;
-	  int ii,jj;
-	  int xc, yc;
-	  int xcc, ycc;
-
-	  // PUT EVEN
-	  for (i=0; i<num_eveneu_x*num_eveneu_y; i++)
-	  {
-		// GET I,Y INDEX FOR COLUMNS
-		yc = int ( i / num_eveneu_x );
-		xc = i - yc * num_eveneu_x;
-
-		// GENERATE RANDOM POSITION AND TEST FOR OVERLAP
-		int overlap = 1;
-		while (overlap)
+	if(dq.put_rand_col_xy != 2) {
+		// ALLOCATE MEMORY
+		basemat_even_x = new float*[num_eveneu_x];
+		basemat_even_y = new float*[num_eveneu_x];
+		for (i=0; i<num_eveneu_x; i++)
 		{
-		  overlap = 0;
-
-		  // GENERATE RANDOM POSITION
-		  x1 = L_rnd * rand01();
-		  y1 = L_rnd * rand01();
-		  z1 = 0.;
-
-		  // SHIFT AWAY FROM WALLS
-		  x1+= L_o;
-		  y1+= L_o;
-
-		  vec pos(x1, y1, z1);
-		  vec diff;
-
-		  // TEST WITH OTHER PLACED COLUMNS
-		  for (ii=0; ii<i; ii++)
+		  basemat_even_x[i] = new float[num_eveneu_y];
+		  basemat_even_y[i] = new float[num_eveneu_y];
+		}
+		basemat_odd_x = new float*[num_oddneu_x];
+		basemat_odd_y = new float*[num_oddneu_x];
+		for (i=0; i<num_oddneu_x; i++)
+		{
+		  basemat_odd_x[i] = new float[num_oddneu_y];
+		  basemat_odd_y[i] = new float[num_oddneu_y];
+		}
+	
+		// INITIALIZE THE MATRICES FOR CRYSTALLINE PLACEMENT
+		float max_x = 0.;
+		float max_y = 0.;
+		for (i=0; i<num_eveneu_x; i++)
+		{
+		  for (j=0; j<num_eveneu_y; j++)
 		  {
-			// GET I,Y INDEX FOR COLUMNS
-			ycc = int ( ii / num_eveneu_x );
-			xcc = ii - ycc * num_eveneu_x;
-
-			vec test( basemat_even_x[xcc][ycc],  basemat_even_y[xcc][ycc], 0. );
-			diff = pos - test;
-
-			double r2    = diff.norm2();
-			//double crit2 = CUAD(2.*dq.neu_radius);
-			double crit2 = CUAD(dq.random_col_mindist);
-
-			// CHECK WITHIN RANGE OF INTERACTION
-			//if (r2 <= crit2) overlap = 1;
-			if (r2 <= crit2) 
-			{
-			  // EXCLUDE WITH A HARD WALL
-			  // overlap = 1;
-
-			  // EXCLUDE WITH A LINEARLY DECAYING PROBABILITY
-		      if (rand01() < ABS(r2-crit2)/crit2) 
-				overlap = 1;
-			}
+			basemat_even_x[i][j] = i * dq.inter_column;
+			basemat_even_y[i][j] = j * inter_y;
+			max_x = MAX(max_x, basemat_even_x[i][j] );
+			max_y = MAX(max_y, basemat_even_y[i][j] );
 		  }
 		}
-
-		// POSITION ACCEPTED
-		basemat_even_x[xc][yc] = x1;
-		basemat_even_y[xc][yc] = y1;
-		if (dq.write_files)
-			col_pos << x1 << " " << y1 << "\n";
-		cout << ".";
-	  }
-	  // PUT ODD
-	  for (i=0; i<num_oddneu_x*num_oddneu_y; i++)
-	  {
-		// GET I,Y INDEX FOR COLUMNS
-		yc = int ( i / num_oddneu_x );
-		xc = i - yc * num_oddneu_x;
-
-		// GENERATE RANDOM POSITION AND TEST FOR OVERLAP
-		int overlap = 1;
-		while (overlap)
+		for (i=0; i<num_oddneu_x; i++)
 		{
-		  overlap = 0;
-
-		  // GENERATE RANDOM POSITION
-		  x1 = L_rnd * rand01();
-		  y1 = L_rnd * rand01();
-		  z1 = 0.;
-
-		  // SHIFT AWAY FROM WALLS
-		  x1+= L_o;
-		  y1+= L_o;
-
-		  vec pos(x1, y1, z1);
-		  vec diff;
-
-		  // TEST WITH OTHER PLACED COLUMNS
-		  // -- EVEN FIRST (ALL OF THEM)
-		  for (ii=0; ii<num_eveneu_x*num_eveneu_y; ii++)
+		  for (j=0; j<num_oddneu_y; j++)
 		  {
-			// GET I,Y INDEX FOR COLUMNS
-			ycc = int ( ii / num_eveneu_x );
-			xcc = ii - ycc * num_eveneu_x;
-
-			vec test( basemat_even_x[xcc][ycc],  basemat_even_y[xcc][ycc], 0. );
-			diff = pos - test;
-
-			double r2    = diff.norm2();
-			//double crit2 = CUAD(2.*dq.neu_radius);
-			double crit2 = CUAD(dq.random_col_mindist);
-
-			// CHECK WITHIN RANGE OF INTERACTION
-			if (r2 <= crit2) 
-			{
-			  // EXCLUDE WITH A HARD WALL
-			  // overlap = 1;
-
-			  // EXCLUDE WITH A LINEARLY DECAYING PROBABILITY
-		      if (rand01() < ABS(r2-crit2)/crit2) 
-				overlap = 1;
-			}
-		  }
-		  // -- ODD NOW 
-		  for (ii=0; ii<i; ii++)
-		  {
-			// GET I,Y INDEX FOR COLUMNS
-			ycc = int ( ii / num_oddneu_x );
-			xcc = ii - ycc * num_oddneu_x;
-
-			vec test( basemat_odd_x[xcc][ycc],  basemat_odd_y[xcc][ycc], 0. );
-			diff = pos - test;
-
-			double r2    = diff.norm2();
-			//double crit2 = CUAD(2.*dq.neu_radius);
-			double crit2 = CUAD(dq.random_col_mindist);
-
-			// CHECK WITHIN RANGE OF INTERACTION
-			if (r2 <= crit2) 
-			{
-			  // EXCLUDE WITH A HARD WALL
-			  // overlap = 1;
-
-			  // EXCLUDE WITH A LINEARLY DECAYING PROBABILITY
-		      if (rand01() < ABS(r2-crit2)/crit2) 
-				overlap = 1;
-			}
+			basemat_odd_x[i][j] = i * dq.inter_column + dq.inter_column / 2.0;
+			basemat_odd_y[i][j] = j * inter_y + dq.inter_column * sin( RAD(60.) );
+			max_x = MAX(max_x, basemat_odd_x[i][j] );
+			max_y = MAX(max_y, basemat_odd_y[i][j] );
 		  }
 		}
-
-		// POSITION ACCEPTED
-		basemat_odd_x[xc][yc] = x1;
-		basemat_odd_y[xc][yc] = y1;
-		if (dq.write_files)
-			col_pos << x1 << " " << y1 << "\n";
-		cout << ".";
-	  }
-	  cout << "\n";
-	  cout << "DONE: putting columns at random positions!\n";
+	
+		// NOW CORRECT SYSTEM SIZE SO THAT COLUMNS AT THE BOUNDARY ARE
+		// NOT TOO CLOSE TOGETHER.
+		cout << "3. Got for columns: Max x = " << max_x << " Max y = " << max_y << "\n";
+		float L_box_tmp = MAX(max_x, max_y) + 2.1*dq.neu_radius;
+		dq.L_box = MAX(dq.L_box, L_box_tmp);
+		cout << "4. Corrected L_box to separate columns: " << dq.L_box << "\n";
+		// WRITE TO PARAM FILE.
+		param_out << dq.L_box    << " \tL_box   \n";
+	
+		// REASSIGN (OR NOT) COLUMN POSITIONS TO HAVE RANDOM X,Y POSITIONS.
+		// RANDOMIZE WITHIN max_x AND max_y.
+		char col_pos_pre[40] = "column_xy_";
+		strcat(col_pos_pre, file_lab);
+		strcat(col_pos_pre, ".xy");
+		ofstream col_pos(col_pos_pre);
+		if (dq.put_random_col_xy) 
+		{
+		  cout << "NOTE: putting columns at random positions!\n";
+	
+		  // THESE ARE SO THAT COLUMNS ARE ALWAYS ONE RADIUS AWAY FROM THE BORDERS,
+		  // RANDOM POSITIONS ARE BETWEEN L_o AND L_o + L_rnd.
+		  // COLUMNS WILL AVOID OVERLAP DESCRIBED BY 2*RADIUS_NEURONS.
+		  double L_rnd = dq.L_box - 2 * dq.neu_radius;
+		  double L_o   = dq.neu_radius;
+		  double x1,y1,z1;
+		  int ii,jj;
+		  int xc, yc;
+		  int xcc, ycc;
+	
+		  // PUT EVEN
+		  for (i=0; i<num_eveneu_x*num_eveneu_y; i++)
+		  {
+			// GET I,Y INDEX FOR COLUMNS
+			yc = int ( i / num_eveneu_x );
+			xc = i - yc * num_eveneu_x;
+	
+			// GENERATE RANDOM POSITION AND TEST FOR OVERLAP
+			int overlap = 1;
+			while (overlap)
+			{
+			  overlap = 0;
+	
+			  // GENERATE RANDOM POSITION
+			  x1 = L_rnd * rand01();
+			  y1 = L_rnd * rand01();
+			  z1 = 0.;
+	
+			  // SHIFT AWAY FROM WALLS
+			  x1+= L_o;
+			  y1+= L_o;
+	
+			  vec pos(x1, y1, z1);
+			  vec diff;
+	
+			  // TEST WITH OTHER PLACED COLUMNS
+			  for (ii=0; ii<i; ii++)
+			  {
+				// GET I,Y INDEX FOR COLUMNS
+				ycc = int ( ii / num_eveneu_x );
+				xcc = ii - ycc * num_eveneu_x;
+	
+				vec test( basemat_even_x[xcc][ycc],  basemat_even_y[xcc][ycc], 0. );
+				diff = pos - test;
+	
+				double r2    = diff.norm2();
+				//double crit2 = CUAD(2.*dq.neu_radius);
+				double crit2 = CUAD(dq.random_col_mindist);
+	
+				// CHECK WITHIN RANGE OF INTERACTION
+				//if (r2 <= crit2) overlap = 1;
+				if (r2 <= crit2) 
+				{
+				  // EXCLUDE WITH A HARD WALL
+				  // overlap = 1;
+	
+				  // EXCLUDE WITH A LINEARLY DECAYING PROBABILITY
+			      if (rand01() < ABS(r2-crit2)/crit2) 
+					overlap = 1;
+				}
+			  }
+			}
+	
+			// POSITION ACCEPTED
+			basemat_even_x[xc][yc] = x1;
+			basemat_even_y[xc][yc] = y1;
+			if (dq.write_files)
+				col_pos << x1 << " " << y1 << "\n";
+			cout << ".";
+		  }
+		  // PUT ODD
+		  for (i=0; i<num_oddneu_x*num_oddneu_y; i++)
+		  {
+			// GET I,Y INDEX FOR COLUMNS
+			yc = int ( i / num_oddneu_x );
+			xc = i - yc * num_oddneu_x;
+	
+			// GENERATE RANDOM POSITION AND TEST FOR OVERLAP
+			int overlap = 1;
+			while (overlap)
+			{
+			  overlap = 0;
+	
+			  // GENERATE RANDOM POSITION
+			  x1 = L_rnd * rand01();
+			  y1 = L_rnd * rand01();
+			  z1 = 0.;
+	
+			  // SHIFT AWAY FROM WALLS
+			  x1+= L_o;
+			  y1+= L_o;
+	
+			  vec pos(x1, y1, z1);
+			  vec diff;
+	
+			  // TEST WITH OTHER PLACED COLUMNS
+			  // -- EVEN FIRST (ALL OF THEM)
+			  for (ii=0; ii<num_eveneu_x*num_eveneu_y; ii++)
+			  {
+				// GET I,Y INDEX FOR COLUMNS
+				ycc = int ( ii / num_eveneu_x );
+				xcc = ii - ycc * num_eveneu_x;
+	
+				vec test( basemat_even_x[xcc][ycc],  basemat_even_y[xcc][ycc], 0. );
+				diff = pos - test;
+	
+				double r2    = diff.norm2();
+				//double crit2 = CUAD(2.*dq.neu_radius);
+				double crit2 = CUAD(dq.random_col_mindist);
+	
+				// CHECK WITHIN RANGE OF INTERACTION
+				if (r2 <= crit2) 
+				{
+				  // EXCLUDE WITH A HARD WALL
+				  // overlap = 1;
+	
+				  // EXCLUDE WITH A LINEARLY DECAYING PROBABILITY
+			      if (rand01() < ABS(r2-crit2)/crit2) 
+					overlap = 1;
+				}
+			  }
+			  // -- ODD NOW 
+			  for (ii=0; ii<i; ii++)
+			  {
+				// GET I,Y INDEX FOR COLUMNS
+				ycc = int ( ii / num_oddneu_x );
+				xcc = ii - ycc * num_oddneu_x;
+	
+				vec test( basemat_odd_x[xcc][ycc],  basemat_odd_y[xcc][ycc], 0. );
+				diff = pos - test;
+	
+				double r2    = diff.norm2();
+				//double crit2 = CUAD(2.*dq.neu_radius);
+				double crit2 = CUAD(dq.random_col_mindist);
+	
+				// CHECK WITHIN RANGE OF INTERACTION
+				if (r2 <= crit2) 
+				{
+				  // EXCLUDE WITH A HARD WALL
+				  // overlap = 1;
+	
+				  // EXCLUDE WITH A LINEARLY DECAYING PROBABILITY
+			      if (rand01() < ABS(r2-crit2)/crit2) 
+					overlap = 1;
+				}
+			  }
+			}
+	
+			// POSITION ACCEPTED
+			basemat_odd_x[xc][yc] = x1;
+			basemat_odd_y[xc][yc] = y1;
+			if (dq.write_files)
+				col_pos << x1 << " " << y1 << "\n";
+			cout << ".";
+		  }
+		  cout << "\n";
+		  cout << "DONE: putting columns at random positions!\n";
+		}
+	}
+	else
+	{
+		//USE CUSTOM LOCATIONS
+		//[row][col] x and [row][col] y
+		set_custom_locations(argv[3], basemat_odd_x, basemat_odd_y, basemat_even_x, basemat_even_y, num_oddneu_x, num_oddneu_y, num_eveneu_x, num_eveneu_y);
 	}
 
 	// INITIALIZE GRID
