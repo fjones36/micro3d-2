@@ -30,6 +30,7 @@
 #include "pair_corr.h"
 
 #include "generate.h"
+#include "Custom.h"
 
 /*
  * PROGRAM TO GENERATE A 3D NEURONAL BLOCK OF MICROCOLUMNS AND

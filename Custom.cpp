@@ -8,6 +8,7 @@
 #include <string>
 #include <string.h>
 #include <cmath>
+#include "Custom.h"
 using namespace std;
 
 vector< vector<float> > genfromtxt(char* fname)
