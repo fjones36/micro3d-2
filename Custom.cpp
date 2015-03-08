@@ -29,10 +29,10 @@ vector< vector<float> > genfromtxt(char* fname)
 }
 
 
-void set_custom_locations(string dq.custom, float **basemat_odd_x, float **basemat_odd_y, float **basemat_even_x, float **basemat_even_y, 
+void set_custom_locations(char* fname, float **basemat_odd_x, float **basemat_odd_y, float **basemat_even_x, float **basemat_even_y, 
 			  int &num_oddneu_x, int &num_oddneu_y, int &num_eveneu_x, int &num_eveneu_y)
 {
-	vector<vector<float> > pts = genfromtxt(dq.custom.c_str());
+	vector<vector<float> > pts = genfromtxt(fname);
 
 	//None fo the even odd stuff matters in this case
 	num_oddneu_x = 1;
@@ -40,6 +40,7 @@ void set_custom_locations(string dq.custom, float **basemat_odd_x, float **basem
 	num_eveneu_x = 1;
 	num_eveneu_y = pts.size() - 1;
 
+	int i, j;
 	
 	// ALLOCATE MEMORY
 	basemat_even_x = new float*[num_eveneu_x];

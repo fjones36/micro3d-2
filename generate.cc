@@ -274,7 +274,11 @@ int main(int argc, char* argv[])
 	float **basemat_odd_x;
 	float **basemat_odd_y;
 
-	if(dq.put_rand_col_xy != 2) {
+	char col_pos_pre[40] = "column_xy_";
+	strcat(col_pos_pre, file_lab);
+	strcat(col_pos_pre, ".xy");
+	ofstream col_pos(col_pos_pre);
+	if(dq.put_random_col_xy != 2) {
 		// ALLOCATE MEMORY
 		basemat_even_x = new float*[num_eveneu_x];
 		basemat_even_y = new float*[num_eveneu_x];
@@ -326,10 +330,6 @@ int main(int argc, char* argv[])
 	
 		// REASSIGN (OR NOT) COLUMN POSITIONS TO HAVE RANDOM X,Y POSITIONS.
 		// RANDOMIZE WITHIN max_x AND max_y.
-		char col_pos_pre[40] = "column_xy_";
-		strcat(col_pos_pre, file_lab);
-		strcat(col_pos_pre, ".xy");
-		ofstream col_pos(col_pos_pre);
 		if (dq.put_random_col_xy) 
 		{
 		  cout << "NOTE: putting columns at random positions!\n";
